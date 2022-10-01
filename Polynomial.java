@@ -22,6 +22,7 @@ public class Polynomial{
 
     public Polynomial(double[] coefficients){
         this.coefficients = coefficients;
+        // assume the exponents are 0, 1, 2, ...
         this.exponents = IntStream.range(0, coefficients.length).toArray();
         this.length = coefficients.length;
     }
@@ -33,6 +34,7 @@ public class Polynomial{
     }
 
     public Polynomial(Stream<Map.Entry<Integer, Double>> stream){
+        // sum the coefficients with the same exponent
         Map<Integer, Double> map = stream.collect(Collectors.toMap(
             Map.Entry::getKey, Map.Entry::getValue, Double::sum
         ));
@@ -43,12 +45,13 @@ public class Polynomial{
 
     public Polynomial(File f) throws FileNotFoundException{
         this(Arrays.stream(new Scanner(f).nextLine().replaceFirst("^(?!-)", "+")
-            .replaceAll("([+-][0-9]+)(?=[-+$])", "$1x0")
-            .replaceAll("x(?![0-9])", "x1")
-            .replaceAll("(?<=[-+])x", "1x").split("(?=[-+])")
-        ).map(s -> s.split("x")).map(
-            split -> Map.entry(Integer.parseInt(split[1]), Double.parseDouble(split[0]))
-        ));
+            .replaceAll("([+-][0-9]+)(?=[-+$])", "$1x0") // e.g. 20 -> 20x0
+            .replaceAll("x(?![0-9])", "x1") // e.g. 20x -> 20x1
+            .replaceAll("(?<=[-+])x", "1x") // e.g. x5 -> 1x5
+            .split("(?=[-+])")
+        ).map(s -> s.split("x")).map(split -> Map.entry(
+            Integer.parseInt(split[1]), Double.parseDouble(split[0])
+        )));
     }
     //#endregion
 
@@ -74,16 +77,22 @@ public class Polynomial{
 
     public Polynomial multiply(Polynomial rhs){
         Set<Map.Entry<Integer, Double>> entries = rhs.map().entrySet();
+        // (a0 + a1*x + a2*x^2 + ...) * (b0 + b1*x + b2*x^2 + ...)
         return new Polynomial(this.map().entrySet().stream().flatMap(
             e1 -> entries.stream().map(e2 -> Map.entry(
+                // a1 * b1 * x ^ (a1+b1)
                 e1.getKey() + e2.getKey(), e1.getValue() * e2.getValue()
             ))
         ));
     }
 
     public double evaluate(double x){
-        return IntStream.range(0, this.length).mapToDouble(
-            i -> this.coefficients[i] * Math.pow(x, this.exponents[i])
+        // imagine using arrays smh
+        // return IntStream.range(0, this.length).mapToDouble(
+        //     i -> this.coefficients[i] * Math.pow(x, this.exponents[i])
+        // ).sum();
+        return this.map().entrySet().stream().mapToDouble(
+            entry -> entry.getValue() * Math.pow(x, entry.getKey())
         ).sum();
     }
 
@@ -95,14 +104,20 @@ public class Polynomial{
         try(PrintStream ps = new PrintStream(file)){
             ps.print(this.map().entrySet().stream().map(
                 entry -> {
-                    Double c = entry.getValue();
-                    if(c == 0.0) return "";
-                    String coefficient = c % 1 == 0 ? Integer.toString(c.intValue()) : Double.toString(c);
+                    Double coefficient = entry.getValue();
+                    if(coefficient == 0.0) return "";
                     Integer exponent = entry.getKey();
-                    String prefix = c > 0 ? "+" : "";
-                    if(exponent == 0) return prefix + coefficient;
-                    if(exponent == 1) return prefix + coefficient + 'x';
-                    return prefix + coefficient + 'x' + exponent;
+                    String s = (coefficient > 0 ? "+" : "") + (
+                        // use int if possible
+                        coefficient % 1 == 0
+                            ? Integer.toString(coefficient.intValue())
+                            : Double.toString(coefficient)
+                    );
+                    return switch(exponent){
+                        case 0 -> s;
+                        case 1 -> s + 'x';
+                        default -> s + 'x' + exponent;
+                    };
                 }
             ).collect(Collectors.joining()).replaceFirst("^\\+", ""));
         }
