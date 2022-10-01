@@ -10,7 +10,7 @@ import java.util.stream.Stream;
 public class Polynomial{
     public double[] coefficients;
     public int[] exponents;
-    private final int length;
+    private int length;
 
     //#region ctors
 
@@ -21,19 +21,24 @@ public class Polynomial{
     }
 
     public Polynomial(double[] coefficients){
-        this.coefficients = coefficients;
-        // assume the exponents are 0, 1, 2, ...
-        this.exponents = IntStream.range(0, coefficients.length).toArray();
-        this.length = coefficients.length;
+        this.coefficients = Arrays.stream(coefficients).filter(
+            c -> c != 0.0
+        ).toArray();
+        this.exponents = IntStream.range(0, coefficients.length).filter(
+            i -> coefficients[i] != 0.0
+        ).toArray();
+        this.length = this.coefficients.length;
     }
 
     public Polynomial(double[] coefficients, int[] exponents){
-        this.coefficients = coefficients;
-        this.exponents = exponents;
+        this(coefficients);
         this.length = Math.min(coefficients.length, exponents.length);
+        this.exponents = IntStream.range(0, this.length).filter(
+            i -> coefficients[i] != 0.0
+        ).map(i -> exponents[i]).toArray();
     }
 
-    public Polynomial(Stream<Map.Entry<Integer, Double>> stream){
+    private Polynomial(Stream<Map.Entry<Integer, Double>> stream){
         // sum the coefficients with the same exponent
         Map<Integer, Double> map = stream.collect(Collectors.toMap(
             Map.Entry::getKey, Map.Entry::getValue, Double::sum
