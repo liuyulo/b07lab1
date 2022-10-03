@@ -71,7 +71,24 @@ public class Polynomial{
 
     @Override
     public String toString(){
-        return this.map().toString();
+        return this.map().entrySet().stream().map(
+            entry -> {
+                Double coefficient = entry.getValue();
+                if(coefficient == 0.0) return "";
+                Integer exponent = entry.getKey();
+                String s = (coefficient > 0 ? "+" : "") + (
+                    // use int if possible
+                    coefficient % 1 == 0
+                        ? Integer.toString(coefficient.intValue())
+                        : Double.toString(coefficient)
+                );
+                return switch(exponent){
+                    case 0 -> s;
+                    case 1 -> s + 'x';
+                    default -> s + 'x' + exponent;
+                };
+            }
+        ).collect(Collectors.joining()).replaceFirst("^\\+", "");
     }
 
     public Polynomial add(Polynomial rhs){
@@ -107,24 +124,7 @@ public class Polynomial{
 
     public void saveToFile(String file) throws FileNotFoundException{
         try(PrintStream ps = new PrintStream(file)){
-            ps.print(this.map().entrySet().stream().map(
-                entry -> {
-                    Double coefficient = entry.getValue();
-                    if(coefficient == 0.0) return "";
-                    Integer exponent = entry.getKey();
-                    String s = (coefficient > 0 ? "+" : "") + (
-                        // use int if possible
-                        coefficient % 1 == 0
-                            ? Integer.toString(coefficient.intValue())
-                            : Double.toString(coefficient)
-                    );
-                    return switch(exponent){
-                        case 0 -> s;
-                        case 1 -> s + 'x';
-                        default -> s + 'x' + exponent;
-                    };
-                }
-            ).collect(Collectors.joining()).replaceFirst("^\\+", ""));
+            ps.print(this);
         }
     }
 }
